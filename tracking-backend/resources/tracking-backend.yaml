@@ -37,6 +37,58 @@ paths:
                 $ref: '#/components/schemas/CheckStationResponse'          
         '400':
           description: Invalid input
+          
+  /tracking/events/start:
+    post:
+      tags:
+        - tracking
+      summary: Report a start event
+      description: |
+        Report the start data matching an arrival of a crate at a work station
+      operationId: createTrackingStart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrackingStartRequest'
+      responses:
+        '204':
+          description: Successful operation
+        
+  /tracking/events/end:  
+    post:
+      tags:
+        - tracking
+      summary: Report an end event
+      description: |
+        Report the end data matching the leaving of a crate at a work station
+      operationId: createTrackingEnd
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrackingEndRequest'
+      responses:
+        '204':
+          description: Successful operation
+          
+  /tracking/events/aggregate:
+    get:
+      tags:
+        - tracking
+      summary: Get the aggregated tracking data
+      description: |
+        Get an aggregate of the average time per station
+      operationId: getTrackingAggregate
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingAggregateResponse'
   
   
   
@@ -66,3 +118,63 @@ components:
         expectedStation:
           type: integer
           example: 1
+          
+    CreateTrackingStartRequest:
+      type: object
+      required:
+        - orderId
+        - stationId
+        - startTime
+      properties:
+        orderId:
+          type: string
+          example: A_123456789
+        stationId:
+          type: integer
+        startTime:
+          type: string
+          format: date-time
+          example: '2017-07-21T17:32:28.000Z'
+        
+    CreateTrackingEndRequest:
+      type: object
+      required:
+        - orderId
+        - stationId
+        - endTime
+      properties:
+        orderId:
+          type: string
+          example: A_123456789
+        stationId:
+          type: integer
+        endTime:
+          type: string
+          format: date-time
+          example: '2017-07-21T17:32:28.000Z'
+        
+    TrackingAggregateResponse:
+      type: object
+      required:
+        - stationAggregates
+      properties:
+        stationAggregates:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingStationAggregate'
+            
+            
+    TrackingStationAggregate:
+      type: object
+      required:
+        - stationId
+        - stationName
+        - stationThroughput
+      properties:
+        stationId:
+          type: integer
+        stationName:
+          type: string
+        stationThroughput:
+          type: integer
+          description: The throughput in milliseconds

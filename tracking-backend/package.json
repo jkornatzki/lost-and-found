@@ -1,15 +1,22 @@
 {
   "name": "tracking-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Tracking workflows and validation workflow steps",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "successful-check": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/successful-check.json http://localhost:3000/api/v1/station/check",
-    "unsuccessful-check": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/unsuccessful-check.json http://localhost:3000/api/v1/station/check"
+    "unsuccessful-check": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/unsuccessful-check.json http://localhost:3000/api/v1/station/check",
+    "tracking-start-event": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/tracking-start.json http://localhost:3000/api/v1/tracking/events/start",
+    "tracking-end-event": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/tracking-end.json http://localhost:3000/api/v1/tracking/events/end",
+    "tracking-aggregate": "curl -X GET -H 'Content-Type: application/json' http://localhost:3000/api/v1/tracking/events/aggregate",
+    "start-event": "curl -X POST -H 'Content-Type: application/json' http://localhost:3000/api/v1/tracking/events/start -d ",
+    "end-event": "curl -X POST -H 'Content-Type: application/json' http://localhost:3000/api/v1/tracking/events/end -d"
   },
   "author": "",
   "dependencies": {
+    "@databases/sqlite": "^4.0.2",
     "express": "^4.19.2"
   }
 }
