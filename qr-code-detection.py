@@ -1,6 +1,14 @@
 import cv2
 import datetime
 
+from enum import Enum
+from playsound import playsound
+
+
+class CameraMode(Enum):
+    ARRIVAL = 1
+    DEPARTURE = 2
+
 
 class Crate:
     def __init__(self, qr_code, scan_date):
@@ -8,6 +16,7 @@ class Crate:
         self.scan_date = scan_date
 
 
+station_name = 'Assembly'
 current_crates = []
 processed_crates = []
 
@@ -44,32 +53,26 @@ def is_processed_crate(qr_info):
 
 def process_crate_arrival(qr_info):
     scan_date = datetime.datetime.now()
-    print("crate arrival detected")
-    print("decoded info: ", qr_info)
-    print("scan date: ", scan_date)
+    print('Order', qr_info, 'arriving at station', station_name, 'at', scan_date)
 
     global current_crates
     if not is_current_crate(qr_info):
-        # New crate
-        print("New crate detected")
         current_crates.append(Crate(qr_info, scan_date))
         # TODO: Send arrival message to BE
+        playsound('./sounds/success_bell.mp3', False)
 
 
 def process_crate_departure(qr_info):
     scan_date = datetime.datetime.now()
-    print("crate departure detected")
-    print("decoded info: ", qr_info)
-    print("scan date: ", scan_date)
+    print('Order', qr_info, 'departing from station', station_name, 'at', scan_date)
 
     global current_crates
     if is_current_crate(qr_info):
-        # same crate
-        print("Same crate as before")
         current_crate = next(current_crate for current_crate in current_crates if current_crate.qr_code == qr_info)
         processed_crates.append(Crate(current_crate.qr_code, current_crate.scan_date))
         current_crates.remove(current_crate)
         # TODO: Send departure message to BE
+        playsound('./sounds/success_bell.mp3', False)
 
 
 # Function to detect faces and apply color overlay to the bounding box area
@@ -82,17 +85,19 @@ def detect_and_color_overlay_bounding_box(frame):
     for (x, y, w, h) in faces:
         # Define the color for the overlay (BGR format)
         # Yellow color (blue, green red)
-        overlay_color = (0, 255, 255)
+        overlay_color = (128, 128, 128)  # (0, 255, 255)
         # Draw a filled rectangle (overlay) on the frame
         cv2.rectangle(frame, (x, y), (x + w, y + h), overlay_color, -1)
     return frame
 
 
+print('Station:', station_name)
 print("Press q to close window")
 
 camera_id = 0
 delay = 1
 window_name = 'QR Code Detector'
+camera_mode = CameraMode.ARRIVAL
 
 # Load the face classifier
 face_classifier = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
@@ -105,9 +110,9 @@ while True:
 
     if ret:
         # Detect faces and apply color overlay to the bounding box area
-        frame_with_color_overlay = detect_and_color_overlay_bounding_box(frame)
+        frame = detect_and_color_overlay_bounding_box(frame)
         # Display the processed frame
-        cv2.imshow(window_name, frame_with_color_overlay)
+        cv2.imshow(window_name, frame)
 
         ret_qr, decoded_info, points, _ = qcd.detectAndDecodeMulti(frame)
         if ret_qr:
@@ -118,6 +123,7 @@ while True:
                     frame = cv2.polylines(frame, [p.astype(int)], True, color_green, 6)
 
                     # for arrival camera - new crate arrival
+                    # TODO: Check crate is supposed to be at this station
                     if not is_current_crate(s) and not is_processed_crate(s):
                         process_crate_arrival(s)
 
@@ -127,12 +133,11 @@ while True:
 
                     if not is_current_crate(s) and not is_processed_crate(s):
                         # TODO: Show red light
+                        playsound('./sounds/error.mp3', False)
                         print("Crate has not been processed at this station! No arrival has been detected previously.")
 
                     if is_current_crate(s):
                         process_crate_departure(s)
-
-                    print("############")
 
         cv2.imshow(window_name, frame)
 
