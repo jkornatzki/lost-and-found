@@ -1,0 +1,68 @@
+openapi: 3.0.3
+info:
+  title: Lost and Found API
+  description: |
+    Lost and found
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: lost@found.io
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+tags:
+  - name: workflow-checks
+    description: Checks that occur during the workflow of a crate
+  - name: tracking
+    description: Tracking crates
+paths:
+  /station/check:
+    post:
+      tags:
+        - workflow-checks
+      summary: Check if a crate is in the correct workflow step
+      description: Check if a crate is in the correct workflow step
+      operationId: checkWorkflowStep
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckStation'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckStationResponse'          
+        '400':
+          description: Invalid input
+  
+  
+  
+components:
+  schemas:
+    CheckStation:
+      type: object
+      required:
+        - orderId
+        - station
+      properties:
+        orderId:
+          type: string
+          example: A_2663577
+        station:
+          type: integer
+          example: 1
+    
+    CheckStationResponse:
+      type: object
+      required:
+        - isAtCorrectStation
+        - expectedStation
+      properties:
+        isAtCorrectStation:
+          type: boolean
+        expectedStation:
+          type: integer
+          example: 1

@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "successful-check": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/successful-check.json http://localhost:3000/station/check",
-    "unsuccessful-check": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/unsuccessful-check.json http://localhost:3000/station/check"
+    "successful-check": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/successful-check.json http://localhost:3000/api/v1/station/check",
+    "unsuccessful-check": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/unsuccessful-check.json http://localhost:3000/api/v1/station/check"
   },
   "author": "",
   "dependencies": {
