@@ -1,5 +1,5 @@
 // DB imports
-import { readTrackingEvents, setTrackingEnd, setTrackingStart } from './src/persistence.js';
+import { getStationAggregates, readTrackingEvents, setTrackingEnd, setTrackingStart } from './src/persistence.js';
 
 
 // Express imports
@@ -45,14 +45,15 @@ app.post('/api/v1/tracking/events/end', async(req, res) => {
     ${JSON.stringify(req.body)}
     ============
     \n`);
+    
     await setTrackingEnd(req.body.orderId, req.body.stationId, new Date(req.body.endTime).getTime());
+    
     res.sendStatus(204);
 });
 
 app.get('/api/v1/tracking/events/aggregate', async(req, res) => {
-    // TODO: Incorrect response for now
-    const trackingEvents = await readTrackingEvents();
-    console.log("TrackingEvents: ", trackingEvents)
+    const trackingEvents = await getStationAggregates();
+    
     res.json(trackingEvents).send();
 });
 
