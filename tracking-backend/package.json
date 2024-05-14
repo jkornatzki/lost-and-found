@@ -1,0 +1,15 @@
+{
+  "name": "tracking-backend",
+  "version": "1.0.0",
+  "description": "Tracking workflows and validation workflow steps",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "successful-check": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/successful-check.json http://localhost:3000/station/check",
+    "unsuccessful-check": "curl -X POST -H 'Content-Type: application/json' -d @test-requests/unsuccessful-check.json http://localhost:3000/station/check"
+  },
+  "author": "",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
