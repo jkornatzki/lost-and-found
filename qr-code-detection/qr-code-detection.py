@@ -1,5 +1,7 @@
 import cv2
 import datetime
+import json
+import requests
 
 from enum import Enum
 from playsound import playsound
@@ -16,9 +18,67 @@ class Crate:
         self.scan_date = scan_date
 
 
-station_name = 'Assembly'
+class Station:
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+
+
+station = Station(1, 'Assembly')
 current_crates = []
 processed_crates = []
+
+
+def send_message_start(order_id):
+    global station
+    if order_id is None:
+        return
+
+    url = 'http://localhost:3000/api/v1/events/start'
+    headers = {'Content-type': 'application/json'}
+    data = {
+        "orderId": order_id,
+        "stationId": station.id,
+        "startTime": datetime.datetime.now()
+    }
+    data_json = json.dumps(data, default=str)
+    requests.post(url, data=data_json, headers=headers)
+
+
+def send_message_end(order_id):
+    global station
+    if order_id is None:
+        return
+
+    url = 'http://localhost:3000/api/v1/events/end'
+    headers = {'Content-type': 'application/json'}
+    data = {
+        "orderId": order_id,
+        "stationId": station.id,
+        "endTime": datetime.datetime.now()
+    }
+    data_json = json.dumps(data, default=str)
+    requests.post(url, data=data_json, headers=headers)
+
+
+def is_crate_allowed_at_station(order_id):
+    global station
+    if order_id is None:
+        return False
+
+    url = 'http://localhost:3000/api/v1/station/check'
+    headers = {'Content-type': 'application/json'}
+    data = {
+        "orderId": order_id,
+        "station": station.id
+    }
+    data_json = json.dumps(data)
+    response = requests.post(url, data=data_json, headers=headers)
+
+    if response is None or response.json()['isAtCorrectStation'] is None:
+        return False
+
+    return response.json()['isAtCorrectStation']
 
 
 def is_current_crate(qr_info):
@@ -51,27 +111,33 @@ def is_processed_crate(qr_info):
     return False
 
 
-def process_crate_arrival(qr_info):
-    scan_date = datetime.datetime.now()
-    print('Order', qr_info, 'arriving at station', station_name, 'at', scan_date)
-
+def process_crate_arrival(order_id):
+    global station
     global current_crates
-    if not is_current_crate(qr_info):
-        current_crates.append(Crate(qr_info, scan_date))
-        # TODO: Send arrival message to BE
+    scan_date = datetime.datetime.now()
+    print('Order', order_id, 'arriving at station', station.name, 'at', scan_date)
+
+    if not is_current_crate(order_id):
+        # update local crate cache
+        current_crates.append(Crate(order_id, scan_date))
+        # update backend
+        send_message_start(order_id)
         playsound('./sounds/success_bell.mp3', False)
 
 
-def process_crate_departure(qr_info):
-    scan_date = datetime.datetime.now()
-    print('Order', qr_info, 'departing from station', station_name, 'at', scan_date)
-
+def process_crate_departure(order_id):
+    global station
     global current_crates
-    if is_current_crate(qr_info):
-        current_crate = next(current_crate for current_crate in current_crates if current_crate.qr_code == qr_info)
+    scan_date = datetime.datetime.now()
+    print('Order', order_id, 'departing from station', station.name, 'at', scan_date)
+
+    if is_current_crate(order_id):
+        # update local crate cache
+        current_crate = next(current_crate for current_crate in current_crates if current_crate.qr_code == order_id)
         processed_crates.append(Crate(current_crate.qr_code, current_crate.scan_date))
         current_crates.remove(current_crate)
-        # TODO: Send departure message to BE
+        # update backend
+        send_message_end(order_id)
         playsound('./sounds/success_bell.mp3', False)
 
 
@@ -91,7 +157,7 @@ def detect_and_color_overlay_bounding_box(frame):
     return frame
 
 
-print('Station:', station_name)
+print('Station:', station.name)
 print("Press q to close window")
 
 camera_id = 0
@@ -117,15 +183,18 @@ while True:
         ret_qr, decoded_info, points, _ = qcd.detectAndDecodeMulti(frame)
         if ret_qr:
             for s, p in zip(decoded_info, points):
+                # decoding successful
                 if s:
-                    # decoding successful
                     color_green = (0, 255, 0)
                     frame = cv2.polylines(frame, [p.astype(int)], True, color_green, 6)
 
                     # for arrival camera - new crate arrival
-                    # TODO: Check crate is supposed to be at this station
                     if not is_current_crate(s) and not is_processed_crate(s):
-                        process_crate_arrival(s)
+                        if is_crate_allowed_at_station("A_2663577"):
+                            process_crate_arrival(s)
+                        else:
+                            # TODO: Show red light
+                            playsound('./sounds/error.mp3', False)
 
                     # for departure camera - already processed crate arrives
                     if not is_current_crate(s) and is_processed_crate(s):
