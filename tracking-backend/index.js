@@ -6,7 +6,7 @@ const port = 3000;
 
 app.use(express.json());
 
-app.post('/station/check', (req, res) => {
+app.post('/api/v1/station/check', (req, res) => {
     // For "unsuccessful ID" send unsuccessful event
     if(req.body.orderId === 'B_2663588') {
         res.send({
