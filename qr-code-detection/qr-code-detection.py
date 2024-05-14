@@ -5,6 +5,7 @@ import requests
 
 from enum import Enum
 from playsound import playsound
+from qreader import QReader
 
 
 class CameraMode(Enum):
@@ -168,7 +169,9 @@ camera_mode = CameraMode.ARRIVAL
 # Load the face classifier
 face_classifier = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
-qcd = cv2.QRCodeDetector()
+# Initialize the QR Detector
+qreader = QReader(model_size='s')
+
 cap = cv2.VideoCapture(camera_id)
 
 while True:
@@ -177,38 +180,42 @@ while True:
     if ret:
         # Detect faces and apply color overlay to the bounding box area
         frame = detect_and_color_overlay_bounding_box(frame)
-        # Display the processed frame
         cv2.imshow(window_name, frame)
 
-        ret_qr, decoded_info, points, _ = qcd.detectAndDecodeMulti(frame)
-        if ret_qr:
-            for s, p in zip(decoded_info, points):
+        detected_qr_codes, detection_information = qreader.detect_and_decode(image=frame, return_detections=True, is_bgr=True)
+
+        for detected_qr_code_with_information in zip(detected_qr_codes, detection_information):
+            if detected_qr_code_with_information[0] is not None:
                 # decoding successful
-                if s:
-                    color_green = (0, 255, 0)
-                    frame = cv2.polylines(frame, [p.astype(int)], True, color_green, 6)
+                qr_code = detected_qr_code_with_information[0]
+                detected_information = detected_qr_code_with_information[1]
 
-                    # for arrival camera - new crate arrival
-                    if not is_current_crate(s) and not is_processed_crate(s):
-                        if is_crate_allowed_at_station("A_2663577"):
-                            process_crate_arrival(s)
-                        else:
-                            # TODO: Show red light
-                            playsound('./sounds/error.mp3', False)
+                cv2.rectangle(frame,
+                              (int(detected_information['bbox_xyxy'][0]), int(detected_information['bbox_xyxy'][1])),
+                              (int(detected_information['bbox_xyxy'][2]), int(detected_information['bbox_xyxy'][3])),
+                              (0, 255, 0),
+                              2)
+                cv2.imshow(window_name, frame)
 
-                    # for departure camera - already processed crate arrives
-                    if not is_current_crate(s) and is_processed_crate(s):
-                        print("Crate has already been processed at this station")
-
-                    if not is_current_crate(s) and not is_processed_crate(s):
+                # for arrival camera - new crate arrival
+                if not is_current_crate(qr_code) and not is_processed_crate(qr_code):
+                    if is_crate_allowed_at_station("A_2663577"):
+                        process_crate_arrival(qr_code)
+                    else:
                         # TODO: Show red light
                         playsound('./sounds/error.mp3', False)
-                        print("Crate has not been processed at this station! No arrival has been detected previously.")
 
-                    if is_current_crate(s):
-                        process_crate_departure(s)
+                # for departure camera - already processed crate arrives
+                if not is_current_crate(qr_code) and is_processed_crate(qr_code):
+                    print("Crate has already been processed at this station")
 
-        cv2.imshow(window_name, frame)
+                if not is_current_crate(qr_code) and not is_processed_crate(qr_code):
+                    # TODO: Show red light
+                    playsound('./sounds/error.mp3', False)
+                    print("Crate has not been processed at this station! No arrival has been detected previously.")
+
+                if is_current_crate(qr_code):
+                    process_crate_departure(qr_code)
 
     if cv2.waitKey(delay) & 0xFF == ord('q'):
         break
