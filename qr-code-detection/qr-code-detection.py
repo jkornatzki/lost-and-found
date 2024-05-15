@@ -78,18 +78,18 @@ def is_crate_allowed_at_station(order_id):
     return response.json()['isAtCorrectStation']
 
 
-# def blink_success():
-#     arduino.write('1'.encode())
-#     time.sleep(0.05)
-#     data = arduino.readline()
-#     return data
+def blink_success():
+    arduino.write('1'.encode())
+    time.sleep(0.05)
+    data = arduino.readline()
+    return data
 
 
-# def blink_error():
-#     arduino.write('2'.encode())
-#     time.sleep(0.05)
-#     data = arduino.readline()
-#     return data
+def blink_error():
+    arduino.write('2'.encode())
+    time.sleep(0.05)
+    data = arduino.readline()
+    return data
 
 
 def is_current_crate(qr_info):
@@ -134,7 +134,8 @@ def process_crate_arrival(order_id):
         # update backend
         send_message_start(order_id)
         playsound('./sounds/success_bell.mp3', False)
-        # blink_success()
+        if use_led_lights:
+            blink_success()
 
 
 def process_crate_departure(order_id):
@@ -151,7 +152,8 @@ def process_crate_departure(order_id):
         # update backend
         send_message_end(order_id)
         playsound('./sounds/success_bell.mp3', False)
-        # blink_success()
+        if use_led_lights:
+            blink_success()
 
 
 # Function to detect faces and apply color overlay to the bounding box area
@@ -177,9 +179,12 @@ camera_id = 0
 delay = 1
 window_name = 'QR Code Detector'
 departure_threshold = 3
+use_led_lights = False
 
 # Connect to LED strip via arduino
-# arduino = serial.Serial(port='/dev/cu.usbmodem14301', baudrate=9600)
+arduino = None
+if use_led_lights:
+    arduino = serial.Serial(port='/dev/cu.usbmodem14301', baudrate=9600)
 
 # Load the face classifier
 face_classifier = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
@@ -217,7 +222,8 @@ while True:
                     if is_crate_allowed_at_station("A_2663577"):
                         process_crate_arrival(qr_code)
                     else:
-                        # blink_error()
+                        if use_led_lights:
+                            blink_error()
                         playsound('./sounds/error.mp3', False)
 
                 if is_current_crate(qr_code):
