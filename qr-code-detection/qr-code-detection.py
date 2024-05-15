@@ -178,8 +178,11 @@ print("Press q to close window")
 camera_id = 0
 delay = 1
 window_name = 'QR Code Detector'
+
+# Configuration
 departure_threshold = 3
 use_led_lights = False
+use_camera = True
 
 # Connect to LED strip via arduino
 arduino = None
@@ -205,6 +208,15 @@ while True:
         detected_qr_codes, detection_information = qreader.detect_and_decode(image=frame, return_detections=True, is_bgr=True)
 
         for detected_qr_code_with_information in zip(detected_qr_codes, detection_information):
+            detected_information = detected_qr_code_with_information[1]
+
+            cv2.rectangle(frame,
+                          (int(detected_information['bbox_xyxy'][0]), int(detected_information['bbox_xyxy'][1])),
+                          (int(detected_information['bbox_xyxy'][2]), int(detected_information['bbox_xyxy'][3])),
+                          (0, 255, 255),
+                          2)
+            cv2.imshow(window_name, frame)
+
             if detected_qr_code_with_information[0] is not None:
                 # decoding successful
                 qr_code = detected_qr_code_with_information[0]
