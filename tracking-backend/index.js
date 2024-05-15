@@ -5,12 +5,14 @@ import { getStationAggregates, readTrackingEvents, setTrackingEnd, setTrackingSt
 // Express imports
 //const express = require('express');
 import express from 'express';
+import cors from 'cors';
 const app = express();
 
 const port = 3000;
 
 
 app.use(express.json());
+app.use(cors());
 
 app.post('/api/v1/station/check', (req, res) => {
     // For "unsuccessful ID" send unsuccessful event
@@ -54,7 +56,7 @@ app.post('/api/v1/tracking/events/end', async(req, res) => {
 app.get('/api/v1/tracking/events/aggregate', async(req, res) => {
     const trackingEvents = await getStationAggregates();
     
-    res.json(trackingEvents).send();
+    res.json({stationAggregates: trackingEvents});
 });
 
 app.listen(port, () => {
