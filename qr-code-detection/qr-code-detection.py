@@ -152,8 +152,8 @@ def process_crate_departure(order_id):
         # update backend
         send_message_end(order_id)
         playsound('./sounds/success_bell.mp3', False)
-        if use_led_lights:
-            blink_success()
+        # if use_led_lights:
+        #     blink_success()
 
 
 # Function to detect faces and apply color overlay to the bounding box area
@@ -176,13 +176,16 @@ print('Station:', station.name)
 print("Press q to close window")
 
 camera_id = 0
-delay = 1
+delay = 10
 window_name = 'QR Code Detector'
 
 # Configuration
-departure_threshold = 3
-use_led_lights = False
+use_led_lights = True
 use_camera = True
+if use_camera:
+    departure_threshold = 3
+else:
+    departure_threshold = 20
 
 # Connect to LED strip via arduino
 arduino = None
@@ -195,7 +198,18 @@ face_classifier = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_fro
 # Initialize the QR Detector
 qreader = QReader(model_size='s')
 
-cap = cv2.VideoCapture(camera_id)
+if use_camera:
+    cap = cv2.VideoCapture(camera_id)
+else:
+    cap = cv2.VideoCapture("./videos/HACKBAY_CHALLENGE_2024_Station_1.mov")
+    # Get video properties to create the output video
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # or use 'XVID'
+    out = cv2.VideoWriter('./videos/HACKBAY_CHALLENGE_2024_Station_1_output.mp4', fourcc, fps, (frame_width, frame_height))
 
 while True:
     ret, frame = cap.read()
@@ -204,23 +218,29 @@ while True:
         # Detect faces and apply color overlay to the bounding box area
         frame = detect_and_color_overlay_bounding_box(frame)
         cv2.imshow(window_name, frame)
+        if not use_camera:
+            out.write(frame)
 
         detected_qr_codes, detection_information = qreader.detect_and_decode(image=frame, return_detections=True, is_bgr=True)
 
         for detected_qr_code_with_information in zip(detected_qr_codes, detection_information):
+            qr_code = detected_qr_code_with_information[0]
             detected_information = detected_qr_code_with_information[1]
 
-            cv2.rectangle(frame,
-                          (int(detected_information['bbox_xyxy'][0]), int(detected_information['bbox_xyxy'][1])),
-                          (int(detected_information['bbox_xyxy'][2]), int(detected_information['bbox_xyxy'][3])),
-                          (0, 255, 255),
-                          2)
-            cv2.imshow(window_name, frame)
+            if detected_qr_code_with_information[0] is None:
+                # decoding failed
+
+                cv2.rectangle(frame,
+                              (int(detected_information['bbox_xyxy'][0]), int(detected_information['bbox_xyxy'][1])),
+                              (int(detected_information['bbox_xyxy'][2]), int(detected_information['bbox_xyxy'][3])),
+                              (0, 255, 255),
+                              2)
+                cv2.imshow(window_name, frame)
+                if not use_camera:
+                    out.write(frame)
 
             if detected_qr_code_with_information[0] is not None:
                 # decoding successful
-                qr_code = detected_qr_code_with_information[0]
-                detected_information = detected_qr_code_with_information[1]
 
                 cv2.rectangle(frame,
                               (int(detected_information['bbox_xyxy'][0]), int(detected_information['bbox_xyxy'][1])),
@@ -228,12 +248,15 @@ while True:
                               (0, 255, 0),
                               2)
                 cv2.imshow(window_name, frame)
+                if not use_camera:
+                    out.write(frame)
 
                 # for new crate arrival
                 if not is_current_crate(qr_code) and not is_processed_crate(qr_code):
-                    if is_crate_allowed_at_station("A_2663577"):
+                    if is_crate_allowed_at_station(qr_code):
                         process_crate_arrival(qr_code)
                     else:
+                        print('Order', qr_code, 'is not supposed to be processed at station', station.name)
                         if use_led_lights:
                             blink_error()
                         playsound('./sounds/error.mp3', False)
@@ -254,4 +277,7 @@ while True:
     if cv2.waitKey(delay) & 0xFF == ord('q'):
         break
 
+cap.release()
+if not use_camera:
+    out.release()
 cv2.destroyWindow(window_name)
