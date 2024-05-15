@@ -2,15 +2,11 @@ import cv2
 import datetime
 import json
 import requests
+import serial
+import time
 
-from enum import Enum
 from playsound import playsound
 from qreader import QReader
-
-
-class CameraMode(Enum):
-    ARRIVAL = 1
-    DEPARTURE = 2
 
 
 class Crate:
@@ -82,6 +78,20 @@ def is_crate_allowed_at_station(order_id):
     return response.json()['isAtCorrectStation']
 
 
+# def blink_success():
+#     arduino.write('1'.encode())
+#     time.sleep(0.05)
+#     data = arduino.readline()
+#     return data
+
+
+# def blink_error():
+#     arduino.write('2'.encode())
+#     time.sleep(0.05)
+#     data = arduino.readline()
+#     return data
+
+
 def is_current_crate(qr_info):
     if qr_info is None:
         return False
@@ -124,6 +134,7 @@ def process_crate_arrival(order_id):
         # update backend
         send_message_start(order_id)
         playsound('./sounds/success_bell.mp3', False)
+        # blink_success()
 
 
 def process_crate_departure(order_id):
@@ -140,6 +151,7 @@ def process_crate_departure(order_id):
         # update backend
         send_message_end(order_id)
         playsound('./sounds/success_bell.mp3', False)
+        # blink_success()
 
 
 # Function to detect faces and apply color overlay to the bounding box area
@@ -164,7 +176,10 @@ print("Press q to close window")
 camera_id = 0
 delay = 1
 window_name = 'QR Code Detector'
-camera_mode = CameraMode.ARRIVAL
+departure_threshold = 3
+
+# Connect to LED strip via arduino
+# arduino = serial.Serial(port='/dev/cu.usbmodem14301', baudrate=9600)
 
 # Load the face classifier
 face_classifier = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
@@ -197,25 +212,26 @@ while True:
                               2)
                 cv2.imshow(window_name, frame)
 
-                # for arrival camera - new crate arrival
+                # for new crate arrival
                 if not is_current_crate(qr_code) and not is_processed_crate(qr_code):
                     if is_crate_allowed_at_station("A_2663577"):
                         process_crate_arrival(qr_code)
                     else:
-                        # TODO: Show red light
+                        # blink_error()
                         playsound('./sounds/error.mp3', False)
 
-                # for departure camera - already processed crate arrives
-                if not is_current_crate(qr_code) and is_processed_crate(qr_code):
-                    print("Crate has already been processed at this station")
-
-                if not is_current_crate(qr_code) and not is_processed_crate(qr_code):
-                    # TODO: Show red light
-                    playsound('./sounds/error.mp3', False)
-                    print("Crate has not been processed at this station! No arrival has been detected previously.")
-
                 if is_current_crate(qr_code):
-                    process_crate_departure(qr_code)
+                    # update scan date
+                    current_crate = next(current_crate for current_crate in current_crates if current_crate.qr_code == qr_code)
+                    current_crate.scan_date = datetime.datetime.now()
+
+        # check for removed qr codes
+        for current_crate in current_crates:
+            # calculate threshold
+            timediff = datetime.datetime.now() - current_crate.scan_date
+            if timediff.total_seconds() > departure_threshold:
+                # threshold succeeded
+                process_crate_departure(current_crate.qr_code)
 
     if cv2.waitKey(delay) & 0xFF == ord('q'):
         break
