@@ -16,7 +16,7 @@ app.use(cors());
 
 app.post('/api/v1/station/check', (req, res) => {
     // For "unsuccessful ID" send unsuccessful event
-    if(req.body.orderId === 'B_2663588') {
+    if(req.body.orderId === 'B_234567890') {
         res.send({
             "isAtCorrectStation": false,
             "expectedStation": 2
