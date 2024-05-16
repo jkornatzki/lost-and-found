@@ -1,5 +1,14 @@
 # Lost and Found
 
+Prototype for the Schaeffler challenge built on [HACK|BAY](https://www.hackbay.de) 2024.
+
+Team Members:
+- Julia Kornatzki
+- Waseem Randhawa
+- Prathik Prasad
+- Linus See
+- Naveen Narasimhappa
+
 ## Tracking Backend
 Run `npm install` to install all dependencies. 
 
